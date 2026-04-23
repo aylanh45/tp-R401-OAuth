@@ -67,11 +67,67 @@ async function createUserFromGoogle(db, { googleId, email, name, picture }) {
   };
 }
 
+// Fonctions Helper pour GitHub OAuth
+async function findUserByGithubId(db, githubId) {
+  const [rows] = await db.query(
+    'SELECT id AS _id, email, password, name, googleId, githubId, microsoftId, picture, provider, createdAt FROM users WHERE githubId = ?',
+    [githubId]
+  );
+  return rows[0] || null;
+}
+
+async function createUserFromGithub(db, { githubId, email, name, picture }) {
+  const [result] = await db.query(
+    'INSERT INTO users (githubId, email, name, picture, provider, createdAt) VALUES (?, ?, ?, ?, ?, NOW())',
+    [githubId, email ? email.toLowerCase() : null, name, picture, 'github']
+  );
+
+  return {
+    _id: result.insertId,
+    githubId,
+    email: email ? email.toLowerCase() : null,
+    name,
+    picture,
+    provider: 'github',
+    createdAt: new Date()
+  };
+}
+
+// Fonctions Helper pour Discord OAuth
+async function findUserByDiscordId(db, discordId) {
+  const [rows] = await db.query(
+    'SELECT id AS _id, email, password, name, googleId, githubId, discordId, picture, provider, createdAt FROM users WHERE discordId = ?',
+    [discordId]
+  );
+  return rows[0] || null;
+}
+
+async function createUserFromDiscord(db, { discordId, email, name, picture }) {
+  const [result] = await db.query(
+    'INSERT INTO users (discordId, email, name, picture, provider, createdAt) VALUES (?, ?, ?, ?, ?, NOW())',
+    [discordId, email ? email.toLowerCase() : null, name, picture, 'discord']
+  );
+
+  return {
+    _id: result.insertId,
+    discordId,
+    email: email ? email.toLowerCase() : null,
+    name,
+    picture,
+    provider: 'discord',
+    createdAt: new Date()
+  };
+}
+
 module.exports = {
   findUserByEmail,
   findUserById,
   createUser,
   comparePassword,
   findUserByGoogleId,
-  createUserFromGoogle
+  createUserFromGoogle,
+  findUserByGithubId,
+  createUserFromGithub,
+  findUserByDiscordId,
+  createUserFromDiscord
 };

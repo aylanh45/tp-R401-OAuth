@@ -42,12 +42,22 @@ async function initDB() {
         password VARCHAR(255),
         name VARCHAR(255) NOT NULL,
         googleId VARCHAR(255) UNIQUE,
+        githubId VARCHAR(255) UNIQUE,
+        discordId VARCHAR(255) UNIQUE,
         picture VARCHAR(500),
         provider VARCHAR(50) DEFAULT 'local',
         createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
     connection.release();
+    // Tentative d'ajout des colonnes si elles n'existent pas
+    try {
+      await connection.query('ALTER TABLE users ADD COLUMN githubId VARCHAR(255) UNIQUE');
+    } catch(e) {}
+    try {
+      await connection.query('ALTER TABLE users ADD COLUMN discordId VARCHAR(255) UNIQUE');
+    } catch(e) {}
+    
     console.log('✅ MySQL connecté et table users prête');
   } catch (err) {
     console.error('❌ Erreur MySQL:', err);

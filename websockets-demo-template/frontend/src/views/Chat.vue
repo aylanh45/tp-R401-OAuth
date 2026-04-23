@@ -69,15 +69,46 @@
       <div class="online-users">
         <div v-if="onlineUsers.length > 0">
           <div v-for="user in onlineUsers" :key="user" class="user-item">
-            <div class="user-item-dot"></div>
+            <div class="user-item-dot" style="background-color: #2ecc71;"></div>
             <span>{{ user }}</span>
             <span v-if="user === username" style="font-size: 0.8rem; color: #7f8c8d;">
               (vous)
             </span>
+            <button v-else @click="openPrivateChat(user)" class="btn-mp" style="margin-left: auto; font-size: 0.7rem; padding: 2px 5px; cursor: pointer;">
+              MP
+            </button>
           </div>
         </div>
         <div v-else class="no-users">
           Aucun utilisateur en ligne
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Messages Privés (BONUS 2) -->
+    <div v-if="showPrivateModal" class="private-modal">
+      <div class="private-modal-content">
+        <div class="private-modal-header">
+          <h3>MP avec {{ privateChatUser }}</h3>
+          <button @click="closePrivateChat">Fermer</button>
+        </div>
+        <div class="private-messages-container" ref="privateMessagesContainer">
+          <div v-for="(msg, idx) in privateMessages" :key="idx" class="message-user" :class="{ own: msg.fromUsername === username }">
+            <div class="message-content">
+              <div v-if="msg.fromUsername !== username" class="message-username">{{ msg.fromUsername }}</div>
+              <div class="message-text">{{ msg.message }}</div>
+              <div class="message-time">{{ formatTime(msg.timestamp) }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="input-wrapper">
+          <input
+            v-model="privateInputMessage"
+            type="text"
+            placeholder="Message privé..."
+            @keyup.enter="sendPrivateMessage"
+          />
+          <button @click="sendPrivateMessage" :disabled="!privateInputMessage.trim()">Envoyer</button>
         </div>
       </div>
     </div>
@@ -101,6 +132,13 @@ const onlineUsers = ref([]);
 const typingUser = ref(null);
 const typingTimeout = ref(null);
 const messagesContainer = ref(null);
+
+// BONUS 2: Private messages state
+const showPrivateModal = ref(false);
+const privateChatUser = ref('');
+const privateMessages = ref([]);
+const privateInputMessage = ref('');
+const privateMessagesContainer = ref(null);
 
 const wsService = socketioService;
 
@@ -185,6 +223,40 @@ const logout = () => {
   }
 };
 
+// BONUS 2: Private Chat Functions
+const openPrivateChat = async (user) => {
+  privateChatUser.value = user;
+  showPrivateModal.value = true;
+  try {
+    const response = await fetch(`${apiUrl}/api/private-messages/${username.value}/${user}`);
+    if (response.ok) {
+      privateMessages.value = await response.json();
+      nextTick(() => {
+        if (privateMessagesContainer.value) {
+          privateMessagesContainer.value.scrollTop = privateMessagesContainer.value.scrollHeight;
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Erreur lors du chargement des MP:', error);
+  }
+};
+
+const closePrivateChat = () => {
+  showPrivateModal.value = false;
+  privateChatUser.value = '';
+};
+
+const sendPrivateMessage = () => {
+  if (!privateInputMessage.value.trim()) return;
+  wsService.emit('private message', {
+    fromUsername: username.value,
+    toUsername: privateChatUser.value,
+    message: privateInputMessage.value
+  });
+  privateInputMessage.value = '';
+};
+
 onMounted(async () => {
   const storedUsername = localStorage.getItem('username');
   if (storedUsername) {
@@ -253,6 +325,28 @@ onMounted(async () => {
   wsService.on('error', (data) => {
     alert(data.message || 'Une erreur est survenue');
   });
+
+  // BONUS 1: Pong
+  wsService.on('ping', () => {
+    wsService.emit('pong');
+  });
+
+  // BONUS 2: Private message event
+  wsService.on('private message', (msg) => {
+    if (
+      showPrivateModal.value &&
+      (privateChatUser.value === msg.fromUsername || privateChatUser.value === msg.toUsername)
+    ) {
+      privateMessages.value.push(msg);
+      nextTick(() => {
+        if (privateMessagesContainer.value) {
+          privateMessagesContainer.value.scrollTop = privateMessagesContainer.value.scrollHeight;
+        }
+      });
+    } else if (msg.fromUsername !== username.value) {
+      alert(`Nouveau message privé de ${msg.fromUsername}: ${msg.message}`);
+    }
+  });
 });
 
 onUnmounted(() => {
@@ -263,5 +357,40 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Les styles sont définis dans style.css */
+/* Les styles sont définis dans style.css, on ajoute juste ceux du modal MP ici */
+.private-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.private-modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  height: 500px;
+}
+.private-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+.private-messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
 </style>

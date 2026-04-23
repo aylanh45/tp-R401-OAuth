@@ -27,6 +27,19 @@ async function connectDB() {
       )
     `);
 
+    // Créer la table private_messages pour le BONUS 2
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS private_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        fromUsername VARCHAR(255) NOT NULL,
+        toUsername VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50) DEFAULT 'private',
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_users_timestamp (fromUsername, toUsername, timestamp)
+      )
+    `);
+
     console.log('✅ MySQL connecté avec succès');
     console.log('📑 Table messages prête');
 

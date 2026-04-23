@@ -180,4 +180,52 @@ router.get('/google/callback',
   }
 );
 
+// --- Routes OAuth GitHub ---
+
+// GET /auth/github - Initie l'authentification GitHub
+router.get('/github',
+  passport.authenticate('github', { scope: [ 'user:email' ], session: false })
+);
+
+// GET /auth/github/callback - Callback GitHub OAuth
+router.get('/github/callback', 
+  passport.authenticate('github', { 
+    session: false,
+    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=auth_failed`
+  }),
+  (req, res) => {
+    try {
+      const token = generateToken(req.user._id);
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${token}`);
+    } catch (error) {
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=token_generation_failed`);
+    }
+  }
+);
+
+// --- Routes OAuth Discord ---
+
+// GET /auth/discord - Initie l'authentification Discord
+router.get('/discord',
+  passport.authenticate('discord', {
+    session: false
+  })
+);
+
+// GET /auth/discord/callback - Callback Discord OAuth
+router.get('/discord/callback', 
+  passport.authenticate('discord', { 
+    session: false,
+    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=auth_failed`
+  }),
+  (req, res) => {
+    try {
+      const token = generateToken(req.user._id);
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${token}`);
+    } catch (error) {
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=token_generation_failed`);
+    }
+  }
+);
+
 module.exports = router;

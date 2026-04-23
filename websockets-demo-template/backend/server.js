@@ -63,6 +63,22 @@ app.get('/api/messages/:room', async (req, res) => {
   }
 });
 
+// GET /api/private-messages/:user1/:user2
+app.get('/api/private-messages/:user1/:user2', async (req, res) => {
+  try {
+    const db = getDB();
+    const { user1, user2 } = req.params;
+    const [messages] = await db.query(
+      'SELECT * FROM private_messages WHERE (fromUsername = ? AND toUsername = ?) OR (fromUsername = ? AND toUsername = ?) ORDER BY timestamp ASC LIMIT 50',
+      [user1, user2, user2, user1]
+    );
+    res.json(messages);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des messages privés:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/rooms
 app.get('/api/rooms', async (req, res) => {
   try {
@@ -88,6 +104,15 @@ app.get('/api/health', (req, res) => {
 io.on('connection', (socket) => {
   // TODO 1: Afficher un message de connexion
   console.log(`✅ Utilisateur connecté: ${socket.id}`);
+
+  // Heartbeat ping pour BONUS 1
+  const pingInterval = setInterval(() => {
+    socket.emit('ping');
+  }, 30000);
+
+  socket.on('pong', () => {
+    // Le client est toujours là
+  });
 
   let currentRoom = null;
   let currentUsername = null;
@@ -177,6 +202,48 @@ io.on('connection', (socket) => {
     socket.to(room).emit('stop typing');
   });
 
+  // BONUS 2: Gérer les messages privés
+  socket.on('private message', async ({ fromUsername, toUsername, message }) => {
+    try {
+      if (!message.trim()) return;
+
+      const db = getDB();
+      await db.query(
+        'INSERT INTO private_messages (fromUsername, toUsername, message, type, timestamp) VALUES (?, ?, ?, ?, NOW())',
+        [fromUsername, toUsername, message, 'private']
+      );
+
+      const msgDoc = {
+        fromUsername,
+        toUsername,
+        message,
+        type: 'private',
+        timestamp: new Date()
+      };
+
+      let toSocketId = null;
+      for (const [r, usersMap] of onlineUsers.entries()) {
+        for (const [sId, uName] of usersMap.entries()) {
+          if (uName === toUsername) {
+            toSocketId = sId;
+            break;
+          }
+        }
+        if (toSocketId) break;
+      }
+
+      if (toSocketId) {
+        io.to(toSocketId).emit('private message', msgDoc);
+      }
+      
+      socket.emit('private message', msgDoc);
+      console.log(`🔒 MP [${fromUsername} -> ${toUsername}]: ${message}`);
+    } catch (error) {
+      console.error('Erreur MP:', error);
+      socket.emit('error', { message: "Erreur lors de l'envoi du message privé" });
+    }
+  });
+
   // TODO 5: Gérer la déconnexion d'un utilisateur
   socket.on('disconnect', async () => {
     if (currentRoom && currentUsername) {
@@ -198,6 +265,7 @@ io.on('connection', (socket) => {
       }
     }
 
+    clearInterval(pingInterval);
     console.log(`❌ Utilisateur déconnecté: ${socket.id}`);
   });
 
