@@ -1,0 +1,19 @@
+{
+  "name": "tp2-jsonwebtoken",
+  "version": "1.0.0",
+  "description": "TP2 : Authentification JWT avec jsonwebtoken",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo 'Testez avec curl - voir README.md'"
+  },
+  "keywords": ["jwt", "jsonwebtoken", "authentication", "refresh-token"],
+  "author": "Étudiant BUT Info S4",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.2.3"
+  }
+}

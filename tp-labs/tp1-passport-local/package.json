@@ -1,0 +1,20 @@
+{
+  "name": "tp1-passport-local",
+  "version": "1.0.0",
+  "description": "TP1 : Authentification avec Passport Local Strategy",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo 'Testez avec curl - voir README.md'"
+  },
+  "keywords": ["passport", "local", "authentication"],
+  "author": "Étudiant BUT Info S4",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.2.3"
+  }
+}
